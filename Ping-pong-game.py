@@ -1,14 +1,7 @@
-
-#README 
-#In the mini project video the ball does not start moving until a key is pressed
-#so I just added a message to remind user about it.
-
-# Implementationof classic arcade game Pong
-
-import PySimpleGUI
+import simplegui
 import random
 
-# initialize globals - pos and vel encode vertical info for paddles
+
 WIDTH = 600
 HEIGHT = 400       
 BALL_RADIUS = 20
@@ -16,164 +9,104 @@ PAD_WIDTH = 8
 PAD_HEIGHT = 80
 HALF_PAD_WIDTH = PAD_WIDTH / 2
 HALF_PAD_HEIGHT = PAD_HEIGHT / 2
-LEFT = False
-RIGHT = True
-ball_vel = [0, 0]
-ball_pos = [WIDTH / 2, HEIGHT / 2]
-paddle1_vel = 0
-paddle2_vel = 0
-paddle1_pos = [0 + PAD_WIDTH // 2, HEIGHT // 2]
-paddle2_pos = [WIDTH - PAD_WIDTH // 2, HEIGHT // 2]
-score1 = "0"
-score2 = "0"
-key_press = False
-message = "Press Any key To Start The Game"
+min_position = (BALL_RADIUS+PAD_WIDTH, BALL_RADIUS)
+max_position = (WIDTH-BALL_RADIUS-PAD_WIDTH, HEIGHT-BALL_RADIUS)
+bounce_speed = [1.1, 1]
 
-def win1():
-    global score1, LEFT
-    var = int(score1)
-    var += 1
-    score1 = str(var)
-    
-def win2():
-    global score2, RIGHT
-    var = int(score2)
-    var += 1
-    score2 = str(var)
-    
-# initialize ball_pos and ball_vel for new bal in middle of table
-# if direction is RIGHT, the ball's velocity is upper right, else upper left
+pad_right_pos = pad_left_pos = HEIGHT / 2
+pad_right_speed = pad_left_speed = 0
+
+
 def spawn_ball(direction):
-    global ball_pos, ball_vel, key_press # these are vectors stored as lists
-    ball_pos = [WIDTH / 2, HEIGHT / 2]    
-    ball_vel = [0, 0]
-    if key_press:
-        ball_vel[0] = random.randrange(2, 5)
-        ball_vel[1] = random.randrange(1, 3)
-      
-        if(direction == RIGHT):
-            ball_vel[1] = -ball_vel[1]
-        else:
-            ball_vel[1] = -ball_vel[1]
-            ball_vel[0] = -ball_vel[0]
-
-# define event handlers
-def new_game():
-    global paddle1_pos,key_press, message, ball_pos, ball_vel,paddle2_pos, paddle1_vel, paddle2_vel,HALF_PAD_HEIGHT, HALF_PAD_WIDTH  # these are numbers
-    global score1, score2  # these are ints
-    paddle1_pos = [0 + PAD_WIDTH // 2, HEIGHT // 2]
-    paddle2_pos = [WIDTH - PAD_WIDTH // 2, HEIGHT // 2]
-    paddle1_vel = 0
-    paddle2_vel = 0
-    score1 = "0"
-    score2 = "0"
-    key_press = False
+    global ball_pos, ball_vel 
     ball_pos = [WIDTH / 2, HEIGHT / 2]
-    ball_vel = [0, 0]
-    message = "Press Any key To Start The Game"
+    ball_vel = [direction * random.randrange(120, 240), -random.randrange(60, 180)]
+
+
+def new_game():
+    global pad_right_pos, pad_left_pos, pad_right_speed, pad_left_speed, scores
+    scores = [0,0]
+    spawn_ball(random.choice([-1,1]))
     
 def draw(canvas):
-    global score1, score2, paddle1_pos, paddle2_pos, ball_pos, ball_vel
- 
-        
-    # draw mid line and gutters
+    global score1, score2, pad_left_pos, pad_right_pos, ball_pos, ball_vel
+         
+
     canvas.draw_line([WIDTH / 2, 0],[WIDTH / 2, HEIGHT], 1, "White")
     canvas.draw_line([PAD_WIDTH, 0],[PAD_WIDTH, HEIGHT], 1, "White")
     canvas.draw_line([WIDTH - PAD_WIDTH, 0],[WIDTH - PAD_WIDTH, HEIGHT], 1, "White")
         
-    # update ball
-    ball_pos[0] += ball_vel[0]
-    ball_pos[1] += ball_vel[1]
-        
-    # draw ball
-    canvas.draw_circle(ball_pos, BALL_RADIUS, 5, "White", "white")
-    
-    # update paddle's vertical position, keep paddle on the screen
-    if((paddle1_pos[1] + HALF_PAD_HEIGHT + paddle1_vel <= HEIGHT) and (paddle1_pos[1]- HALF_PAD_HEIGHT + paddle1_vel >= 0)):
-        paddle1_pos[1] += paddle1_vel
-    
-    if((paddle2_pos[1] + HALF_PAD_HEIGHT + paddle2_vel <= HEIGHT) and (paddle2_pos[1]- HALF_PAD_HEIGHT + paddle2_vel >= 0)):
-        paddle2_pos[1] += paddle2_vel
-    
-    # draw paddles
-    a = 0
-    b = paddle1_pos[1] - PAD_HEIGHT // 2
-    c = PAD_WIDTH
-    d = paddle1_pos[1] + PAD_HEIGHT // 2
-    canvas.draw_polygon([(a, b), (a, d), (c, d), (c, b)], 2, "White", "white")
-    
-    a = WIDTH - PAD_WIDTH
-    b = paddle2_pos[1] - PAD_HEIGHT // 2
-    c = WIDTH
-    d = paddle2_pos[1] + PAD_HEIGHT // 2
-    canvas.draw_polygon([(a, b), (a, d), (c, d), (c, b)], 2, "White", "white")
-    
-    # determine whether paddle and ball collide    
-    
-    if(ball_pos[1] + BALL_RADIUS >= HEIGHT):
-        ball_vel[1] = -ball_vel[1] 
-    
-    if(ball_pos[1]  <= BALL_RADIUS):
-        ball_vel[1] = -ball_vel[1]
-        
-    if(ball_pos[0] + BALL_RADIUS >= WIDTH - PAD_WIDTH):
-        if paddle2_pos[1] - HALF_PAD_HEIGHT-5 <= ball_pos[1] <=  paddle2_pos[1] +5+ HALF_PAD_HEIGHT:
-            ball_vel[0] = -ball_vel[0]
-            if(ball_vel[0] < 0):
-                ball_vel[0] -= 1
-            else:
-                ball_vel[0] += 1
-        else:
-            win1()
-            spawn_ball(False)
+
+    update_ball()
             
+
+    canvas.draw_circle(ball_pos, BALL_RADIUS, 1, "white", "white")
     
-    if(ball_pos[0] <= PAD_WIDTH + BALL_RADIUS):
-        if paddle1_pos[1] - HALF_PAD_HEIGHT - 5<= ball_pos[1] <=  paddle1_pos[1] +5+ HALF_PAD_HEIGHT:
-            ball_vel[0] = -ball_vel[0]
-            if(ball_vel[0] < 0):
-                ball_vel[0] -= 1
-            else:
-                ball_vel[0] += 1
-        else:
-            win2()
-            spawn_ball(True)
-            
-    # draw scores
-    canvas.draw_text(score1, [200, 100], 40, "White")
-    canvas.draw_text(score2, [360, 100], 40, "White")
-    canvas.draw_text(message, [30, 250], 40, "Yellow")    
+    pad_left_pos = constrained_pos(pad_left_pos, HALF_PAD_HEIGHT, HEIGHT-HALF_PAD_HEIGHT, pad_left_speed)
+    pad_right_pos = constrained_pos(pad_right_pos, HALF_PAD_HEIGHT, HEIGHT-HALF_PAD_HEIGHT, pad_right_speed)
+    
+    
+    canvas.draw_line((HALF_PAD_WIDTH, pad_left_pos - HALF_PAD_HEIGHT), 
+                     (HALF_PAD_WIDTH, pad_left_pos + HALF_PAD_HEIGHT),
+                     PAD_WIDTH, 'white')  
+    canvas.draw_line((WIDTH-HALF_PAD_WIDTH, pad_right_pos - HALF_PAD_HEIGHT), 
+                     (WIDTH-HALF_PAD_WIDTH, pad_right_pos + HALF_PAD_HEIGHT),
+                     PAD_WIDTH, 'white')
+    
+       
+    bounce_or_score()
+    
+    
+    canvas.draw_text(str(scores[0]), (WIDTH*0.2, HEIGHT*0.3), HEIGHT*0.2, 'white')
+    canvas.draw_text(str(scores[1]), (WIDTH*0.7, HEIGHT*0.3), HEIGHT*0.2, 'white')
+
+def bounce_or_score():
+    if ball_pos[0] == min_position[0] and paddle_miss(pad_left_pos):
+        score(1)
+    elif ball_pos[0] == max_position[0] and paddle_miss(pad_right_pos):
+        score(0)
+        
+def score(who):
+    scores[who] += 1
+    spawn_ball(who*2-1)
+                
+def paddle_miss(paddle_pos):
+    return not (paddle_pos - HALF_PAD_HEIGHT <= ball_pos[1] <= paddle_pos + HALF_PAD_HEIGHT)
+        
+def update_ball():  
+    for i in (0,1):
+        ball_pos[i] = constrained_pos(ball_pos[i],min_position[i],max_position[i],ball_vel[i]/60.0)
+        if ball_pos[i] in (min_position[i], max_position[i]):
+            ball_vel[i] *= -bounce_speed[i]
+
+def constrained_pos(old_position, min_position, max_position, speed):
+    position = old_position + speed
+    if (position <= min_position): return min_position
+    elif (position >= max_position): return max_position
+    else: return position
         
 def keydown(key):
-    global paddle1_vel, paddle2_vel, key_press, message
-    
-    if not key_press:
-        message = ""
-        key_press = True
-        spawn_ball(True)
-    
-    if key == PySimpleGUI.KEY_MAP["up"]:
-        paddle2_vel = -10
-    if key == PySimpleGUI.KEY_MAP["down"]:
-        paddle2_vel = 10
-   
-    if key == ord("w") or key == ord("W"):
-        paddle1_vel = -10
-    if key == ord("s") or key == ord("S"):
-        paddle1_vel = 10
+    speed = 5
+    global pad_right_speed, pad_left_speed
+    if key == simplegui.KEY_MAP['up']: pad_right_speed = -speed
+    elif key == simplegui.KEY_MAP['down']: pad_right_speed = speed
+    elif key == simplegui.KEY_MAP['w']: pad_left_speed = -speed
+    elif key == simplegui.KEY_MAP['s']: pad_left_speed = speed
 
 def keyup(key):
-    global paddle1_vel, paddle2_vel
-    paddle1_vel = 0
-    paddle2_vel = 0
+    global pad_right_speed, pad_left_speed
+    if key == simplegui.KEY_MAP['up']: pad_right_speed = max (0, pad_right_speed)
+    elif key == simplegui.KEY_MAP['down']: pad_right_speed = min (0, pad_right_speed)
+    elif key == simplegui.KEY_MAP['w']: pad_left_speed = max (0, pad_left_speed)
+    elif key == simplegui.KEY_MAP['s']: pad_left_speed = min (0, pad_left_speed)
 
-# create frame
-frame = PySimpleGUI.create_frame("Pong", WIDTH, HEIGHT)
+
+frame = simplegui.create_frame("Pong", WIDTH, HEIGHT)
 frame.set_draw_handler(draw)
 frame.set_keydown_handler(keydown)
 frame.set_keyup_handler(keyup)
-frame.add_button("Restart", new_game)
+frame.add_button('Restart', new_game, 100)
 
-# start frame
+
 new_game()
 frame.start()
